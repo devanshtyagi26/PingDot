@@ -34,7 +34,6 @@
       width: 15px;
       height: 15px;
       border-radius: 50%;
-      background: #25D366;
       cursor: default;
       position: relative;
       right: 13px;
@@ -67,17 +66,18 @@
       right: 30px;
       left: auto;
     }
-
+    
     /* Left-side dot: tooltip goes RIGHT */
     body.side-left #dot::after {
       left: 30px;
       right: auto;
     }
-
+    
     #dot:hover::after { opacity: 1; }
-
+    
     /* ── Blinking ── */
     #dot.blinking {
+      background: #25D366;
       opacity: 1;
       transform: scale(1);
       cursor: pointer;

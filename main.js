@@ -90,7 +90,7 @@ function createOverlayWindow() {
   overlayWindow.loadFile("overlay.html", {
     query: { side: dotSide || "left" },
   });
-  overlayWindow.webContents.openDevTools({ mode: "detach" });
+  // overlayWindow.webContents.openDevTools({ mode: "detach" });
 
   // Keep above EVERYTHING including fullscreen apps
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
