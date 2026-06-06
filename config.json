@@ -1,0 +1,9 @@
+{
+  "contactName": "Mummy",
+  "checkIntervalMs": 1000,
+  "dotSize": 22,
+  "dotSide": "right",
+  "dotY": 16,
+  "dotColor": "#25D366",
+  "showDotWhenIdle": false
+}
