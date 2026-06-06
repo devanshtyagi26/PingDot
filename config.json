@@ -5,5 +5,5 @@
   "dotSide": "right",
   "dotY": 16,
   "dotColor": "#25D366",
-  "showDotWhenIdle": false
+  "showDotWhenIdle": true
 }

@@ -16,4 +16,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   // Overlay → Main: user clicked the dot to dismiss
   dismiss: () => ipcRenderer.send('dismiss'),
+  // Overlay → Main: toggle click-through
+  setIgnoreMouse: (ignore) => ipcRenderer.send('set-ignore-mouse', ignore),
 });

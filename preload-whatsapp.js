@@ -1,153 +1,149 @@
 /**
  * preload-whatsapp.js
- * Injected into the WhatsApp Web BrowserWindow.
- * Polls the DOM for unread messages from the target contact
- * and sends IPC messages to the main process.
- *
- * NOTE: Runs in Electron's privileged preload context —
- * not affected by WhatsApp's Content Security Policy.
+ * Polls WhatsApp Web DOM for unread messages from the target contact.
+ * Uses unread COUNT (not just badge presence) so dismiss + new message works correctly.
  */
 const { ipcRenderer } = require('electron');
 
 // ─── State ──────────────────────────────────────────────────────────────────────
 let config = null;
 let pollTimer = null;
-let lastState = false; // was unread badge visible last tick?
 let isReady = false;
+let lastNotifiedCount = 0;  // unread count at the time we last sent 'new-message'
+let lastFoundCount = 0;     // unread count seen on last tick (for change detection)
 
-// ─── Fetch config from main process ────────────────────────────────────────────
+// ─── Config ─────────────────────────────────────────────────────────────────────
 async function init() {
   config = await ipcRenderer.invoke('get-config');
-  console.log(`[WA Monitor] Config loaded. Watching: "${config.contactName}"`);
+  console.log(`[WA Monitor] Watching: "${config.contactName}"`);
 }
 
-// ─── DOM Selectors (multiple fallbacks for WhatsApp Web resilience) ─────────────
-/**
- * Returns { found: boolean, name: string|null } for the target contact's chat item.
- */
-function findContactUnread() {
-  // Strategy 1: data-testid based (most stable)
+// ─── DOM: find contact and return unread count ───────────────────────────────────
+function findContactUnreadCount() {
+  // Strategy 1: data-testid (most stable)
   const chatItems = document.querySelectorAll('[data-testid="cell-frame-container"]');
 
   for (const item of chatItems) {
-    // Get display name — try several possible elements
     const nameEl =
       item.querySelector('[data-testid="cell-frame-title"] span[title]') ||
       item.querySelector('[data-testid="cell-frame-title"] span') ||
       item.querySelector('span[title]');
 
     if (!nameEl) continue;
-
     const name = (nameEl.getAttribute('title') || nameEl.textContent || '').trim();
-    if (!name) continue;
+    if (!name.toLowerCase().includes(config.contactName.toLowerCase())) continue;
 
-    // Case-insensitive partial match (handles "Mom 😊" matching "Mom")
-    if (name.toLowerCase().includes(config.contactName.toLowerCase())) {
-      // Check for unread badge
-      const badge =
-        item.querySelector('[data-testid="icon-unread-count"]') ||
-        item.querySelector('[aria-label*="unread" i]') ||
-        item.querySelector('span[data-icon="unread-count"]');
+    const badge =
+      item.querySelector('[data-testid="icon-unread-count"]') ||
+      item.querySelector('[aria-label*="unread" i]') ||
+      item.querySelector('span[data-icon="unread-count"]');
 
-      return { found: !!badge, name };
-    }
+    if (!badge) return { count: 0, name };
+
+    // Parse the number; WhatsApp shows "99+" for large counts — treat as 99
+    const raw = badge.textContent.trim().replace('+', '');
+    const count = parseInt(raw) || 1;
+    return { count, name };
   }
 
-  // Strategy 2: scan all spans with titles if strategy 1 found nothing
-  // (fallback for when WhatsApp updates its testids)
+  // Strategy 2: fallback span[title] scan
   const allTitles = document.querySelectorAll('span[title]');
   for (const el of allTitles) {
     const name = (el.getAttribute('title') || '').trim();
     if (!name.toLowerCase().includes(config.contactName.toLowerCase())) continue;
 
-    // Walk up to find the list item and look for badge
     let parent = el.parentElement;
     for (let i = 0; i < 8 && parent; i++) {
       const badge =
         parent.querySelector('[data-testid="icon-unread-count"]') ||
         parent.querySelector('[aria-label*="unread" i]');
-      if (badge) return { found: true, name };
+      if (badge) {
+        const raw = badge.textContent.trim().replace('+', '');
+        return { count: parseInt(raw) || 1, name };
+      }
       parent = parent.parentElement;
     }
-    return { found: false, name };
+    return { count: 0, name };
   }
 
-  return { found: false, name: null };
+  return { count: 0, name: null };
 }
 
-// ─── Poll Loop ─────────────────────────────────────────────────────────────────
+// ─── Poll Loop ───────────────────────────────────────────────────────────────────
 function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
 
   pollTimer = setInterval(() => {
     if (!config || !isReady) return;
 
-    const { found, name } = findContactUnread();
+    const { count, name } = findContactUnreadCount();
 
-    if (found && !lastState) {
-      // Transition: no unread → unread
-      console.log(`[WA Monitor] 🔴 Unread message from "${name}"`);
-      ipcRenderer.send('new-message', name || config.contactName);
-    } else if (!found && lastState) {
-      // Transition: unread → read (user opened the chat)
-      console.log(`[WA Monitor] ✅ Message read / no longer unread`);
-      ipcRenderer.send('message-read');
+    if (count > 0) {
+      // Blink only if unread count is HIGHER than when we last notified.
+      // This means: new messages arrived since last blink/dismiss.
+      if (count > lastNotifiedCount) {
+        console.log(`[WA Monitor] 🔴 ${count} unread from "${name}" (was ${lastNotifiedCount})`);
+        lastNotifiedCount = count;
+        ipcRenderer.send('new-message', name || config.contactName);
+      }
+    } else {
+      // Badge gone — user read the chat
+      if (lastFoundCount > 0) {
+        console.log(`[WA Monitor] ✅ Read`);
+        ipcRenderer.send('message-read');
+      }
+      lastNotifiedCount = 0; // fully reset so next message triggers fresh
     }
 
-    lastState = found;
+    lastFoundCount = count;
   }, config.checkIntervalMs || 2500);
 
   console.log(`[WA Monitor] Polling every ${config.checkIntervalMs || 2500}ms`);
 }
 
-// ─── Wait for WhatsApp Web to Load ─────────────────────────────────────────────
-function waitForChatList() {
-  return new Promise((resolve) => {
-    // WhatsApp renders a side pane once fully loaded and logged in
-    const check = setInterval(() => {
-      const ready =
-        document.querySelector('#side') ||
-        document.querySelector('[data-testid="chat-list"]') ||
-        document.querySelector('[aria-label="Chat list"]');
-
-      if (ready) {
-        clearInterval(check);
-        resolve();
-      }
-    }, 1000);
-  });
-}
-
-// ─── Handle Contact Updates from Main ──────────────────────────────────────────
+// ─── IPC from Main ───────────────────────────────────────────────────────────────
 ipcRenderer.on('update-contact', (_event, newContact) => {
   if (config) {
     config.contactName = newContact;
-    lastState = false;
-    console.log(`[WA Monitor] Contact updated to: "${newContact}"`);
+    lastNotifiedCount = 0;
+    lastFoundCount = 0;
+    console.log(`[WA Monitor] Contact → "${newContact}"`);
   }
 });
 
-// User dismissed the dot — reset so the next unread can re-trigger
+// Dismissed dot without reading in WhatsApp:
+// Keep lastNotifiedCount at current count — only re-blink if MORE messages arrive.
 ipcRenderer.on('reset-state', () => {
-  lastState = false;
-  console.log('[WA Monitor] State reset — ready for next message');
+  // lastNotifiedCount stays as-is (= current unread count)
+  // lastFoundCount stays as-is
+  // Effect: no immediate re-blink; only triggers when count increases beyond current
+  console.log(`[WA Monitor] Dismissed — watching for new messages (count=${lastNotifiedCount})`);
 });
 
-// ─── Bootstrap ─────────────────────────────────────────────────────────────────
+// ─── Bootstrap ───────────────────────────────────────────────────────────────────
 window.addEventListener('load', async () => {
   await init();
+  console.log('[WA Monitor] Waiting for WhatsApp Web…');
 
-  console.log('[WA Monitor] Waiting for WhatsApp Web to load…');
+  const waitForChatList = () => new Promise((resolve) => {
+    const t = setInterval(() => {
+      if (
+        document.querySelector('#side') ||
+        document.querySelector('[data-testid="chat-list"]') ||
+        document.querySelector('[aria-label="Chat list"]')
+      ) { clearInterval(t); resolve(); }
+    }, 1000);
+  });
+
   await waitForChatList();
-
   isReady = true;
-  console.log('[WA Monitor] ✅ Chat list found. Starting monitor.');
+  console.log('[WA Monitor] ✅ Ready');
   startPolling();
 });
 
-// Safety: if page navigates/refreshes, restart
 window.addEventListener('beforeunload', () => {
   if (pollTimer) clearInterval(pollTimer);
   isReady = false;
-  lastState = false;
+  lastNotifiedCount = 0;
+  lastFoundCount = 0;
 });

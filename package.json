@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "description": "A tiny always-on-top dot that blinks when a specific WhatsApp contact messages you.",
   "main": "main.js",
-  "author": "Devansh Tyagi",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win portable"
   },
+  "dependencies": {
+    "electron": "^28.3.3"
+  },
   "devDependencies": {
-    "electron": "^42.3.3",
-    "electron-builder": "^26.15.0"
+    "electron-builder": "^24.13.3"
   },
   "build": {
     "appId": "com.yourname.whatsapp-dot-notifier",
