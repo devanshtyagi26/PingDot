@@ -1,6 +1,67 @@
-# 🟢 WhatsApp Dot Notifier
+# 🟢 PingDot
 
-A tiny always-on-top green dot in the corner of your screen that **blinks when a specific person messages you on WhatsApp** — regardless of what you're doing on your PC.
+> A tiny, always-on-top dot that blinks when a specific WhatsApp contact messages you — without ever opening WhatsApp — regardless of what you're doing on your PC.
+
+![Platform](https://img.shields.io/badge/platform-Windows-blue?style=flat-square)
+![Electron](https://img.shields.io/badge/electron-42.x-47848F?style=flat-square&logo=electron)
+
+---
+
+## What It Does
+
+PingDot sits silently in the corner of your screen invisible. The moment your chosen contact sends you a WhatsApp message, the dot appears and starts pulsing. Click it to dismiss. That's it.
+
+No notifications. No popups. No sound. Just a gentle, ambient signal that someone wants your attention.
+
+---
+
+## Features
+
+- **Always-on-top overlay** — floats above every window, including fullscreen apps
+- **Fully click-through** — never gets in your way when idle; only captures clicks when blinking
+- **Smart unread tracking** — blinks only on _new_ messages, not on ones you've already seen
+- **Dismissable** — click the dot to acknowledge; re-blinks only if more messages arrive
+- **Tray icon** — right-click to change contact, open WhatsApp, or quit
+- **Configurable** — dot size, position, color, polling interval, and more via `config.json`
+- **Portable build** — single `.exe`, no installer required
+
+---
+
+## Screenshot
+
+![Screenshot sample](assets/image.png)
+
+The dot lives at the edge of your screen. When a message arrives, it pulses green with a soft ripple animation. Hover to see who messaged you. Click to dismiss.
+
+---
+
+## Configuration
+
+Edit `config.json` in the project root to customise behaviour:
+
+```json
+{
+  "contactName": "John Doe",
+  "checkIntervalMs": 1000,
+  "dotSize": 22,
+  "dotSide": "right",
+  "dotY": 16,
+  "dotColor": "#25D366",
+  "showDotWhenIdle": true
+}
+```
+
+| Field             | Type                  | Description                                                             |
+| ----------------- | --------------------- | ----------------------------------------------------------------------- |
+| `contactName`     | `string`              | Name of the contact to watch. Partial matches work (case-insensitive).  |
+| `checkIntervalMs` | `number`              | How often (ms) to poll WhatsApp Web for new messages. Default: `1000`.  |
+| `dotSize`         | `number`              | Diameter of the dot in pixels. Default: `22`.                           |
+| `dotSide`         | `"left"` \| `"right"` | Which edge of the screen to place the dot on.                           |
+| `dotY`            | `number`              | Vertical position (px from top of screen).                              |
+| `dotColor`        | `string`              | Dot colour as a hex value. Default: WhatsApp green `#25D366`.           |
+| `showDotWhenIdle` | `boolean`             | Show a faint dot when idle, or hide completely until a message arrives. |
+
+You can also change the contact at runtime via the tray icon: right-click → **Change Contact…**
 
 ---
 
@@ -20,95 +81,70 @@ WhatsApp Web (hidden window)
 
 ---
 
-## Setup
+## Project Structure
 
-### 1. Prerequisites
-- [Node.js](https://nodejs.org/) v18 or newer
-- Windows 10/11
-
-### 2. Install & run
-
-```bash
-# Clone or download this folder, then:
-cd whatsapp-dot-notifier
-npm install
-npm start
 ```
-
-### 3. Log in to WhatsApp Web
-On first launch, a WhatsApp Web window opens. Scan the QR code with your phone.  
-After login, you can minimize or hide that window — it stays running in the background.
-
-### 4. Set your contact name
-
-Edit `config.json`:
-
-```json
-{
-  "contactName": "Mom"
-}
+pingdot/
+├── main.js                # Main process: windows, tray, IPC orchestration
+├── preload-whatsapp.js    # WhatsApp Web DOM polling (runs in WA window)
+├── preload-overlay.js     # IPC bridge for the overlay window
+├── overlay.html           # The dot UI (transparent frameless window)
+├── config.json            # User configuration
+├── package.json
+└── assets/
+    └── icon.ico           # Tray / app icon
 ```
-
-The name must match **how the contact appears in your WhatsApp chat list** (partial match works, e.g. `"Mom"` matches `"Mom 😊"`).
-
-You can also change it live from the **system tray icon → Change Contact…**
 
 ---
 
-## Configuration (`config.json`)
+## Tray Menu
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `contactName` | `"Mom"` | Name to watch (partial, case-insensitive) |
-| `checkIntervalMs` | `2500` | How often to poll (ms). Lower = faster but more CPU |
-| `dotSize` | `22` | Dot diameter in pixels |
-| `dotX` | `16` | X position from top-left of screen |
-| `dotY` | `16` | Y position from top-left of screen |
-| `dotColor` | `"#25D366"` | Dot color (WhatsApp green by default) |
-| `showDotWhenIdle` | `true` | Show faint dot even when no new messages |
+Right-click the tray icon for quick actions:
 
----
-
-## Usage
-
-| Action | Result |
-|--------|--------|
-| **Dot blinks green** | You have an unread message from your contact |
-| **Click the dot** | Dismiss the blink notification |
-| **Contact reads back** | Blink stops automatically |
-| **Tray icon → Open WhatsApp** | Opens the WhatsApp Web window |
-| **Tray icon → Change Contact** | Set a new contact without restarting |
-| **Tray icon → Quit** | Exits the app |
-
----
-
-## Build a `.exe` (optional)
-
-```bash
-npm run build
-```
-
-Output will be in `dist/` as a portable `.exe` — no installer needed.
+| Option               | Description                                                      |
+| -------------------- | ---------------------------------------------------------------- |
+| 👀 Watching: "…"     | Shows which contact is currently monitored (non-clickable label) |
+| 💬 Open WhatsApp Web | Brings the hidden WhatsApp window to the front                   |
+| ✏️ Change Contact…   | Opens a dialog to update the watched contact name                |
+| ⚙️ Open config.json  | Opens the config file in your default text editor                |
+| 🔴 Stop blinking     | Manually dismiss the current blink (visible only when blinking)  |
+| ❌ Quit              | Fully exits the app                                              |
 
 ---
 
 ## Troubleshooting
 
-**Dot not blinking?**
-- Make sure the contact name in `config.json` matches exactly what appears in your WhatsApp chat list.
-- Open the WhatsApp Web window and verify you're still logged in.
-- Ensure there's actually an unread message badge (blue circle with number) next to that chat.
+**The dot never blinks even though I have unread messages.**
+Make sure `contactName` in `config.json` matches the name shown in WhatsApp Web exactly (or at least partially). Names are matched case-insensitively. Open WhatsApp Web manually to verify the contact name.
 
-**WhatsApp asks me to log in every time?**
-- Electron stores the session in your app's user data folder automatically. Don't clear Electron's user data.
+**WhatsApp asks me to scan the QR code every time I launch.**
+Electron stores the WhatsApp session in `%APPDATA%\PingDot`. This folder persists between launches. If the session keeps expiring, check that the folder hasn't been cleared by a cleanup tool.
 
-**Dot appears behind full-screen apps?**
-- The overlay uses the `screen-saver` level which should float above full-screen windows on Windows 10/11. Some games using exclusive full-screen mode may still cover it.
+**The dot appears on the wrong screen.**
+PingDot uses the primary display. Multi-monitor support is not currently implemented.
+
+**The app won't start / shows a cache error.**
+Delete `%APPDATA%\PingDot` and restart. The app will re-create it cleanly.
 
 ---
 
-## Limitations
+## Privacy
 
-- Requires WhatsApp Web to be loaded in the background (the hidden Electron window).
-- Only works while the app is running.
-- WhatsApp Web's internal DOM structure occasionally changes with updates — if it breaks, open an issue.
+PingDot runs entirely on your local machine. No data is sent anywhere. WhatsApp Web is loaded directly in an Electron window using your own WhatsApp account, the same way it works in a browser. The DOM polling happens entirely in the preload script — nothing is intercepted, stored, or transmitted.
+
+---
+
+## Contributing
+
+Issues and pull requests are welcome. For major changes, please open an issue first to discuss what you'd like to change.
+
+---
+
+## Contact
+
+PingDot is built by **Devansh Tyagi**.
+
+- **GitHub:** [devanshtyagi26](https://github.com/devanshtyagi26)
+- **LinkedIn:** [tyagi-devansh](https://linkedin.com/in/tyagi-devansh)
+- **Email:** [tyagidevansh3@gmail.com](mailto:tyagidevansh3@gmail.com)
+- **Portfolio:** [https://devanshportfolio-hazel.vercel.app/](https://devanshportfolio-hazel.vercel.app/)
