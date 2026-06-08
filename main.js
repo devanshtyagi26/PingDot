@@ -117,34 +117,30 @@ function createOverlayWindow() {
 
 // ─── WhatsApp Window ───────────────────────────────────────────────────────────
 function createWhatsAppWindow() {
-  // Must be set on the SESSION before the window is created —
-  // webPreferences.userAgent alone is too late and WhatsApp rejects Electron.
   const CHROME_UA =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+    "(KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36";
 
+  // Declare BEFORE using in webPreferences
   const { session } = require("electron");
-  session.defaultSession.setUserAgent(CHROME_UA);
+  const waSession = session.fromPartition("persist:whatsapp");
+  waSession.setUserAgent(CHROME_UA);
 
   whatsappWindow = new BrowserWindow({
     width: 1100,
     height: 750,
     title: "WhatsApp — Vigil",
-    show: true, // show initially so user can scan QR
-    icon: appIcon,
+    show: true,
     webPreferences: {
       preload: path.join(__dirname, "preload-whatsapp.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      session: waSession,
     },
   });
 
-  // Belt-and-suspenders: also set it on the webContents before navigation
-  whatsappWindow.webContents.setUserAgent(CHROME_UA);
-
   whatsappWindow.loadURL("https://web.whatsapp.com");
 
-  // Intercept close → hide instead (keeps session alive)
   whatsappWindow.on("close", (e) => {
     if (!isQuitting) {
       e.preventDefault();
