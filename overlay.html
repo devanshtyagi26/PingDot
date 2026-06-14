@@ -1,145 +1,220 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Dot</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dot</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      background: transparent;
-      overflow: hidden;
-      -webkit-app-region: no-drag;
-      user-select: none;
-    }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        -webkit-app-region: no-drag;
+        user-select: none;
+      }
 
-    .container {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      /* dot side is set via JS below */
-      justify-content: flex-end; /* default: right */
-      padding: 8px;
-    }
+      .container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        /* dot side is set via JS below */
+        justify-content: flex-end; /* default: right */
+        padding: 8px;
+      }
 
-    body.side-left .container {
-      justify-content: flex-start;
-    }
+      body.side-left .container {
+        justify-content: flex-start;
+      }
 
-    /* ── The dot ── */
-    #dot {
-      width: 15px;
-      height: 15px;
-      border-radius: 50%;
-      cursor: default;
-      position: relative;
-      right: 13px;
-      flex-shrink: 0;
+      /* ── The dot ── */
+      #dot {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        cursor: default;
+        position: relative;
+        right: 13px;
+        flex-shrink: 0;
 
-      opacity: 0.25;
-      transform: scale(0.85);
-      transition: opacity 0.4s ease, transform 0.4s ease;
-      box-shadow: 0 0 0px 0px rgba(37,211,102,0), 0 1px 4px rgba(0,0,0,0.2);
-    }
+        opacity: 0.25;
+        transform: scale(0.85);
+        transition:
+          opacity 0.4s ease,
+          transform 0.4s ease;
+        box-shadow:
+          0 0 0px 0px rgba(37, 211, 102, 0),
+          0 1px 4px rgba(0, 0, 0, 0.2);
+      }
 
-    /* ── Tooltip ── */
-    #dot::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(0,0,0,0.78);
-      color: #fff;
-      font-family: system-ui, sans-serif;
-      font-size: 11px;
-      white-space: nowrap;
-      padding: 4px 9px;
-      border-radius: 5px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.18s;
+      /* ── Tooltip ── */
+      #dot::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.78);
+        color: #fff;
+        font-family: system-ui, sans-serif;
+        font-size: 11px;
+        white-space: nowrap;
+        padding: 4px 9px;
+        border-radius: 5px;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.18s;
 
-      /* Default (right-side dot): tooltip goes LEFT */
-      right: 30px;
-      left: auto;
-    }
+        /* Default (right-side dot): tooltip goes LEFT */
+        right: 30px;
+        left: auto;
+      }
 
-    /* Left-side dot: tooltip goes RIGHT */
-    body.side-left #dot::after {
-      left: 30px;
-      right: auto;
-    }
+      /* Left-side dot: tooltip goes RIGHT */
+      body.side-left #dot::after {
+        left: 30px;
+        right: auto;
+      }
 
-    #dot:hover::after { opacity: 1; }
+      #dot:hover::after {
+        opacity: 1;
+      }
 
-    /* ── Blinking ── */
-    #dot.blinking {
-      background: #25D366;
-      opacity: 1;
-      transform: scale(1);
-      cursor: pointer;
-      animation: pulse 1s ease-in-out infinite;
-    }
+      /* ── Blinking ── */
+      #dot.blinking {
+        background: #25d366;
+        opacity: 1;
+        transform: scale(1);
+        cursor: pointer;
+        animation: pulse 1s ease-in-out infinite;
+      }
 
-    #dot.blinking::before {
-      content: '';
-      position: absolute;
-      inset: -4px;
-      border-radius: 50%;
-      border: 2px solid #25D366;
-      animation: ripple 1s ease-out infinite;
-    }
+      #dot.blinking::before {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 2px solid #25d366;
+        animation: ripple 1s ease-out infinite;
+      }
 
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 8px 2px rgba(37,211,102,0.6), 0 1px 4px rgba(0,0,0,0.2); }
-      50%       { box-shadow: 0 0 15px 6px rgba(37,211,102,0.7), 0 1px 4px rgba(0,0,0,0.2); transform: scale(1.08); }
-    }
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow:
+            0 0 8px 2px rgba(37, 211, 102, 0.6),
+            0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+        50% {
+          box-shadow:
+            0 0 15px 6px rgba(37, 211, 102, 0.7),
+            0 1px 4px rgba(0, 0, 0, 0.2);
+          transform: scale(1.08);
+        }
+      }
 
-    @keyframes ripple {
-      0%   { transform: scale(0.9); opacity: 0.9; }
-      100% { transform: scale(1.2); opacity: 0; }
-    }
+      @keyframes ripple {
+        0% {
+          transform: scale(0.9);
+          opacity: 0.9;
+        }
+        100% {
+          transform: scale(1.2);
+          opacity: 0;
+        }
+      }
 
-    #dot.settling {
-      animation: none;
-      opacity: 0.25;
-      transform: scale(0.85);
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div id="dot" data-tooltip="PingDot — watching…"></div>
-  </div>
+      #dot.settling {
+        animation: none;
+        opacity: 0.25;
+        transform: scale(0.85);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="dot" data-tooltip="PingDot — watching…"></div>
+    </div>
 
-  <script>
-    // Read ?side= from query string injected by main.js
-    const side = new URLSearchParams(window.location.search).get('side') || 'left';
-    document.body.classList.add('side-' + side);
+    <script>
+      // Read ?side= from query string injected by main.js
+      const side =
+        new URLSearchParams(window.location.search).get("side") || "left";
+      document.body.classList.add("side-" + side);
 
-    const dot = document.getElementById('dot');
+      const dot = document.getElementById("dot");
 
-    window.electronAPI.onStartBlink((contactName) => {
-      dot.classList.remove('settling');
-      dot.classList.add('blinking');
-      dot.setAttribute('data-tooltip', `${contactName} · click to dismiss`);
-    });
+      window.electronAPI.onStartBlink((contactName) => {
+        dot.classList.remove("settling");
+        dot.classList.add("blinking");
+        dot.setAttribute("data-tooltip", `${contactName} · click to dismiss`);
+      });
 
-    window.electronAPI.onStopBlink(() => {
-      dot.classList.remove('blinking');
-      dot.classList.add('settling');
-      dot.setAttribute('data-tooltip', 'PingDot — watching…');
-      setTimeout(() => dot.classList.remove('settling'), 500);
-    });
+      window.electronAPI.onStopBlink(() => {
+        dot.classList.remove("blinking");
+        dot.classList.add("settling");
+        dot.setAttribute("data-tooltip", "PingDot — watching…");
+        setTimeout(() => dot.classList.remove("settling"), 500);
+      });
 
-    dot.addEventListener('click', () => {
-      if (dot.classList.contains('blinking')) window.electronAPI.dismiss();
-    });
+      dot.addEventListener("click", () => {
+        if (dot.classList.contains("blinking")) window.electronAPI.dismiss();
+      });
 
-    dot.addEventListener('contextmenu', (e) => e.preventDefault());
-  </script>
-</body>
+      dot.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      // ── Notification Sound (Web Audio API — no external file needed) ────────────
+      function playNotification() {
+        const ctx = new AudioContext();
+
+        // First tone (Lower, short setup note)
+        const o1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        o1.type = "triangle";
+        o1.connect(g1);
+        g1.connect(ctx.destination);
+
+        o1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        g1.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g1.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+        g1.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+        o1.start(ctx.currentTime);
+        o1.stop(ctx.currentTime + 0.15);
+
+        // Second tone (Higher, bright crisp note)
+        const o2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        o2.type = "triangle";
+        o2.connect(g2);
+        g2.connect(ctx.destination);
+
+        const startTime = ctx.currentTime + 0.08; // Overlaps tightly with the first note
+        o2.frequency.setValueAtTime(783.99, startTime); // G5
+        g2.gain.setValueAtTime(0.0001, startTime);
+        g2.gain.exponentialRampToValueAtTime(0.25, startTime + 0.02);
+        g2.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.35); // Longer tail
+        o2.start(startTime);
+        o2.stop(startTime + 0.35);
+
+        setTimeout(() => ctx.close(), 600);
+      }
+
+      window.electronAPI.onPlaySound(() => playNotification());
+
+      // ── Click-through toggle ────────────────────────────────────────────────────
+      // Window is click-through by default. Disable it only when hovering the dot.
+      dot.addEventListener("mouseenter", () =>
+        window.electronAPI.setIgnoreMouse(false),
+      );
+      dot.addEventListener("mouseleave", () =>
+        window.electronAPI.setIgnoreMouse(true),
+      );
+    </script>
+  </body>
 </html>

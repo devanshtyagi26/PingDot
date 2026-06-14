@@ -92,7 +92,6 @@ function createOverlayWindow() {
     movable: false,
     hasShadow: false,
     focusable: false, // never steal focus
-    // icon: appIcon,
     webPreferences: {
       preload: path.join(__dirname, "preload-overlay.js"),
       contextIsolation: true,
@@ -185,6 +184,14 @@ function buildTrayMenu() {
       enabled: isBlinking,
       click: () => stopBlinking(),
     },
+    {
+      label: `${config.soundEnabled ? "🔊  Sound: On" : "🔇  Sound: Off"}`,
+      click: () => {
+        config.soundEnabled = !config.soundEnabled;
+        saveConfig(config);
+        refreshTray();
+      },
+    },
     { type: "separator" },
     {
       label: "❌  Quit",
@@ -206,8 +213,8 @@ function createTray() {
 
   if (!trayIcon || trayIcon.isEmpty()) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
-      <circle cx="8" cy="8" r="7" fill="${config.dotColor}"/>
-    </svg>`;
+    <circle cx="8" cy="8" r="7" fill="${config.dotColor}"/>
+  </svg>`;
     trayIcon = svgToNativeImage(svg, 16);
   }
 
@@ -315,6 +322,10 @@ function startBlinking(contactName) {
   if (isBlinking) return;
   isBlinking = true;
   overlayWindow?.webContents.send("start-blink", contactName);
+  // Play notification sound if enabled
+  if (config.soundEnabled) {
+    overlayWindow?.webContents.send("play-sound");
+  }
   refreshTray();
 }
 
