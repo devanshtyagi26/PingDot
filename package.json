@@ -1,5 +1,5 @@
 {
-  "name": "whatsapp-dot-notifier",
+  "name": "PingDot",
   "version": "1.0.0",
   "description": "A tiny always-on-top dot that blinks when a specific WhatsApp contact messages you.",
   "main": "main.js",
@@ -12,19 +12,24 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.yourname.whatsapp-dot-notifier",
-    "productName": "WhatsApp Dot Notifier",
+    "appId": "com.Devansh.PingDot",
+    "productName": "PingDot 1.0",
     "win": {
       "target": "portable",
       "icon": "assets/icon.ico"
     },
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
     "files": [
       "main.js",
       "preload-overlay.js",
       "preload-whatsapp.js",
       "overlay.html",
-      "config.json",
-      "assets/**"
+      "config.json"
     ]
   }
 }

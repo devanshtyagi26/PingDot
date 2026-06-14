@@ -18,11 +18,12 @@ app.setPath("userData", path.join(app.getPath("appData"), "PingDot"));
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 const CONFIG_PATH = path.join(__dirname, "config.json");
-// Create an explicit image instance
-const iconPath = app.isPackaged
-  ? path.join(process.resourcesPath, "assets", "icon.ico")
-  : path.join(__dirname, "assets", "icon.ico");
-const appIcon = nativeImage.createFromPath(iconPath);
+
+function getIconPath() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "assets", "icon.ico")
+    : path.join(__dirname, "assets", "icon.ico");
+}
 
 function loadConfig() {
   try {
@@ -91,7 +92,7 @@ function createOverlayWindow() {
     movable: false,
     hasShadow: false,
     focusable: false, // never steal focus
-    icon: appIcon,
+    // icon: appIcon,
     webPreferences: {
       preload: path.join(__dirname, "preload-overlay.js"),
       contextIsolation: true,
@@ -196,8 +197,22 @@ function buildTrayMenu() {
 }
 
 function createTray() {
-  tray = new Tray(iconPath);
-  tray.setToolTip("WhatsApp Dot Notifier");
+  const iconPath = getIconPath();
+  let trayIcon;
+
+  if (fs.existsSync(iconPath)) {
+    trayIcon = nativeImage.createFromPath(iconPath);
+  }
+
+  if (!trayIcon || trayIcon.isEmpty()) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+      <circle cx="8" cy="8" r="7" fill="${config.dotColor}"/>
+    </svg>`;
+    trayIcon = svgToNativeImage(svg, 16);
+  }
+
+  tray = new Tray(trayIcon);
+  tray.setToolTip("PingDot");
   tray.setContextMenu(buildTrayMenu());
 
   tray.on("double-click", () => {
@@ -337,11 +352,6 @@ ipcMain.on("dismiss", () => {
 
 // ─── App Lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  const img = nativeImage.createFromPath(iconPath);
-  if (process.platform === "win32") {
-    app.setAppUserModelId("com.Devansh.PingDot"); // already done, keep it
-  }
-
   createOverlayWindow();
   createWhatsAppWindow();
   createTray();
